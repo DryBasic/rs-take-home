@@ -22,7 +22,7 @@ import streamlit as st
 query_gene, query_disease = st.selectbox('Pick an association', options=asn.rows())
 ```
 
-However, practically speaking, such an application is unlikely to be used in a one-by-one approach. If the queries are to be provided en masse via a file, the could be validated en masse as well: 
+However, practically speaking, such an application is unlikely to be used in a one-by-one approach. If the queries are to be provided en masse via a file, they could be validated en masse as well: 
 ```
 SELECT gene_id, disease_id, 
     CASE val.gene_id
@@ -43,6 +43,7 @@ The size of the data to query against is even more impactful than the number of 
 
  #### 3) Parallelization? Caching?
 
- If the size of tables holding associations and hierarchies become sufficently large, the data and tasks can be parallelized. The easiest solution might be to use `Spark` (optimizing performance will likely require experimentation with `n` partitions). 
+ If the sizes of the tables holding associations and hierarchies become sufficently large, the data and tasks can be parallelized for efficiency. The easiest solution might be to use `Spark` (optimizing performance will likely require experimentation with `n` partitions). Like `polars`, `PySpark` offers a SQL context so that the existing code can be almost fully reused.
 
- SQL engines by default perform some level of parallelism (although not exactly "fine-tune-able"). There exists broad band of data sizes where the SQL engine will optimize and execute faster than other solutions (especially with read/write onto other machines). Writing optimized functions/procedures is likely the lowest maintenance headache as well.
+ SQL engines by default perform some level of parallelism (although not exactly "fine-tune-able"). There exists a broad band of data sizes where the SQL engine will optimize and execute faster than other solutions (especially with read/write onto other machines). Writing optimized functions/procedures is likely the lowest maintenance headache as well.
+ 
