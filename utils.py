@@ -13,7 +13,7 @@ class AssociationValidator:
     Could also be modified to take gene, disease labels instead.
     """
     def __init__(self, associations: pl.DataFrame):
-        self.valid_associations = associations
+        self.valid_associations = associations.rows()
 
     def validate(self, gene_id: str, disease_id: str):
         query = (gene_id, disease_id)

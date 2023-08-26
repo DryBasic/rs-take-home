@@ -9,21 +9,30 @@ The following script executes upon the instructional README requirements:
 > And should output the number of unique genes associated with the query disease 
 > or any of its direct parent/child diseases, based on the input data.
 
-Suggested enhancements (guided partially by the "Considerations" of the 
+Suggested enhancements (guided by the "Considerations" of the 
 instructional README) can be found in this repository's README. 
 """
+from pathlib import Path
 from utils import *
 
-asn = pl.read_csv('data/example_associations.csv')
+# might be better supplied as args to a CLI tool using argparse 
+associations_path = './data/example_associations.csv'
+hierarchy_path = './data/example_disease_hierarchy.csv'
+
+asn = pl.read_csv(Path(__file__).parent / associations_path)
 validator = AssociationValidator(asn)
 
+# might be better supplied as args to a CLI tool using argparse 
 valid = False
 while not valid: 
     query_gene = input('Enter valid gene ID: ')
     query_disease = input('Enter valid disease ID: ')
     valid = validator.validate(query_gene, query_disease)
 
-dh = pl.read_csv('data/example_disease_hierarchy.csv')
+    if not valid:
+        print('Gene, Disease pair does not match valid associations. Please try again.')
+
+dh = pl.read_csv(Path(__file__).parent / hierarchy_path)
 sql = pl.SQLContext()
 sql.register('asn', asn)
 sql.register('dh', dh)
@@ -49,6 +58,6 @@ result = sql.execute(f"""
     FROM cte
     INNER JOIN asn ON asn.disease_id = cte.candidate_id
     GROUP BY gene_id
-""").collect()
+""").collect().item(0,0)
 
 print(f'Number of associated genes: {result}')

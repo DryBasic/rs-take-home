@@ -1,3 +1,14 @@
+
+# Introduction
+
+* `app.py` main solution 
+    * `requirements.txt` pertains to this file (just `polars`)
+* `streamlit-example.py` solution but using the `streamlit` framework for a UI
+    * Requires installation of `streamlit` module
+    * Can deploy locally after installation via `streamlit run streamlit-example.py` from the working directory
+
+***
+
 # Considerations
 
  #### 1) What should be done about inconsistent or corrupted data/queries?
