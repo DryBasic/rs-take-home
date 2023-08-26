@@ -2,49 +2,36 @@
 
  #### 1) What should be done about inconsistent or corrupted data/queries?
 
-Different approaches can be taken depending on who the target end user is, and what the frequency of use will be:
+The "AssociationValidator" object was written to confirm the provided query exists within the known set of associations. Under the current design where inputs are single pairs, this could also be replaced using a UI with restrictive drop-downs.
 
-* If the queries are to be provided en masse via a file, the parameters in the file should be QC'd (check if exists in database). Exceptions where an inappropriate parameter was passed should be handled to return an error code but allow for computation of the valid queries.
+Can be very quickly done with `streamlit`:
+```
+import streamlit as st
 
-* If the queries are to be performed *infrequently* by a human user, a simple UI can be created to restrict the user to valid query parameters only.
+query_gene, query_disease = st.selectbox('Pick an association', options=asn.rows())
+```
+
+However, practically speaking, such an application is unlikely to be used in a one-by-one approach. If the queries are to be provided en masse via a file, the could be validated en masse as well: 
+```
+SELECT gene_id, disease_id, 
+    CASE val.gene_id
+        WHEN NULL THEN 'Fail'
+        ELSE 'Pass'
+        END AS validation_result
+FROM input
+LEFT JOIN valid_associations AS val
+    ON input.disease_id = val.disease_id
+    AND input.gene_id = val.gene_id
+```
 
  #### 2) How would you optimize the solution for a large number of gene-disease queries?
 
+The validation can be optimized per the last section of consideration 1. Optimizing the computation itself might require using different tools that support parallelization (see consideration 3). 
 
+The size of the data to query against is even more impactful than the number of queries. The optimal solution depends heavily on the coupling and resources of compute and storage. It is likely that for a broad range of data sizes, the most efficient solution may be to simply write a SQL function or procedure on the database host. If the database is constantly changing, this is highly recommended to minimize the need for constant cache refreshes on the machine sending the queries. 
 
  #### 3) Parallelization? Caching?
 
  If the size of tables holding associations and hierarchies become sufficently large, the data and tasks can be parallelized. The easiest solution might be to use `Spark` (optimizing performance will likely require experimentation with `n` partitions). 
 
  SQL engines by default perform some level of parallelism (although not exactly "fine-tune-able"). There exists broad band of data sizes where the SQL engine will optimize and execute faster than other solutions (especially with read/write onto other machines). Writing optimized functions/procedures is likely the lowest maintenance headache as well.
-
- *Disclaimer: I've never had to work with data so large that it merited a separate computer server. I'm heavily biased towards offloading as much complexity onto the SQL host.*
-
-
-
-***
-
-# Performance & Practical Notes
-
-Since the sample data is tabular and strictly formatted, it seems likely that it might exist in a relational database as opposed to csv files. Under this case, the following SQL query should net the same desired output:
-
-```
-WITH cte AS (
-    SELECT 
-        -- Get the parent or child gene from the relationship pair
-        CASE dh.disease_id_child
-            WHEN ${query} THEN dh.disease_id_parent
-            ELSE dh.disease_id_child
-            END AS candidate_id
-    FROM disease_hierarchy AS dh
-    WHERE dh.disease_id_child = ${query} OR dh.disease_id_parent = ${query}
-)
-SELECT COUNT(asn.gene_id)
-FROM cte
-INNER JOIN associations AS asn
-    ON asn.disease_id = cte.candidate_id
--- remove duplicates
-GROUP BY asn.gene_id
-```
-
-However, this approach places all computational strain on the database host. The decision of where the transformation should be performed depends highly on the expected size of the data, frequency of transformation, and the coupling and resourcing of storage and compute. It may be easier to handle unique caching logic on a compute server decoupled from the database host. 
